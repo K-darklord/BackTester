@@ -49,7 +49,7 @@ def fetch_etf_basket(
     # Fallback: import Strategist's data fetcher directly
     try:
         import sys
-        sys.path.insert(0, "/Users/kevin/PycharmProjects/Strategist")
+        sys.path.insert(0, "/Users/kevin/PycharmProjects/Fund/Strategist")
         from strategist.data_fetcher import fetch_etf_basket as fetch_basket
         from strategist.config import US_ETFS, HK_ETFS, ASHARE_ETFS
 

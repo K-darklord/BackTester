@@ -56,6 +56,8 @@ class BacktestResult:
             f"Volatility:      {m['volatility']:>10.2%}",
             f"Win Rate:        {m['win_rate']:>10.2%}",
             f"# Trades:        {m['n_trades']:>10d}",
+            f"TxCost (bps):    {m.get('transaction_cost_bps', 0):>10.2f}",
+            f"TxCost Total:    {m.get('transaction_costs_total', 0):>10.4f}",
         ]
         return "\n".join(lines)
 
@@ -108,10 +110,20 @@ class BacktestEngine:
     (next-day execution, no look-ahead bias).
     """
 
-    def __init__(self, prices: pd.DataFrame, initial_capital: float = 1_000_000.0):
-        """prices: DataFrame of prices indexed by date, columns = assets."""
+    def __init__(
+        self,
+        prices: pd.DataFrame,
+        initial_capital: float = 1_000_000.0,
+        transaction_cost_bps: float = 10.0,
+    ):
+        """prices: DataFrame of prices indexed by date, columns = assets.
+
+        transaction_cost_bps: per-side cost in basis points (10bp = 0.1%).
+        A round-trip (0 -> 1 -> 0) therefore costs 2 * transaction_cost_bps.
+        """
         self.prices = prices.sort_index()
         self.initial_capital = initial_capital
+        self.transaction_cost_bps = float(transaction_cost_bps)
 
     def run(self, strategy: Strategy, benchmark: Strategy | None = None) -> BacktestResult:
         """Run the strategy and return metrics + equity curve.
@@ -141,7 +153,17 @@ class BacktestEngine:
         pos_diff = position.diff().abs()
         n_trades = int((pos_diff > 0.001).sum())
 
+        # FORK EXTENSION: deduct transaction costs on position changes.
+        # cost_bps is per-side; a round-trip (e.g., 0->1->0) costs 2*cost_bps.
+        # Apply cost as a daily return drag proportional to abs(position change).
+        cost_per_unit = self.transaction_cost_bps / 10000.0
+        trade_costs = pos_diff.fillna(0.0) * cost_per_unit
+        strat_returns = strat_returns - trade_costs
+        transaction_costs_total = float(trade_costs.sum())
+
         metrics = compute_metrics(strat_returns, n_trades=n_trades)
+        metrics["transaction_costs_total"] = transaction_costs_total
+        metrics["transaction_cost_bps"] = self.transaction_cost_bps
 
         # Equity curve
         equity = self.initial_capital * (1 + strat_returns).cumprod()

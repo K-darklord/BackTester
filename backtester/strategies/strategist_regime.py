@@ -9,12 +9,11 @@ This is the core strategy for backtesting the Strategist agent's decisions.
 
 from __future__ import annotations
 
-import sys
-
 import pandas as pd
 
 # Add Strategist repo to path
-sys.path.insert(0, "/Users/kevin/PycharmProjects/Strategist")
+from backtester._paths import ensure_repos
+ensure_repos("Strategist")
 
 from backtester.signal import Signal
 from .base import BaseStrategy
