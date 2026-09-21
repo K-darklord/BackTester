@@ -7,8 +7,9 @@ package so we do not create a cross-repo import dependency.
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
-_REPO_ROOT = "/Users/kevin/PycharmProjects/Fund"
+_REPO_ROOT = str(Path(__file__).resolve().parents[2])
 _REPO_PATHS = {
     "Strategist":  f"{_REPO_ROOT}/Strategist",
     "Backtester":  f"{_REPO_ROOT}/Backtester",
